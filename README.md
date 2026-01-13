@@ -6,15 +6,36 @@ This project demonstrates how to publish images and videos automatically to diff
 ---
 
 ## Supported Platforms
-- X (Twitter)
- <img width="1684" height="622" alt="image" src="https://github.com/user-attachments/assets/a598006a-6f9b-42c8-8b47-475290eb0d85" />
-- Threads
- <img width="1269" height="372" alt="image" src="https://github.com/user-attachments/assets/8624a737-1d31-4cdb-abb8-e210b22455ca" />
-- Facebook Pages
- <img width="1420" height="548" alt="image" src="https://github.com/user-attachments/assets/9aeea03f-4e5e-466c-93da-a914cd64bec9" />
-- Pinterest
- <img width="1714" height="435" alt="image" src="https://github.com/user-attachments/assets/ade17175-6aee-4769-a1c0-360b8258dd39" />
 
+### X (Twitter)
+<img width="1684" height="622" alt="image" src="https://github.com/user-attachments/assets/a598006a-6f9b-42c8-8b47-475290eb0d85" />
+
+API Access:  
+https://developer.x.com
+
+---
+
+### Threads
+<img width="1269" height="372" alt="image" src="https://github.com/user-attachments/assets/8624a737-1d31-4cdb-abb8-e210b22455ca" />
+
+API Access (via Meta Developers):  
+https://developers.facebook.com
+
+---
+
+### Facebook Pages
+<img width="1420" height="548" alt="image" src="https://github.com/user-attachments/assets/9aeea03f-4e5e-466c-93da-a914cd64bec9" />
+
+API Access (Meta Graph API):  
+https://developers.facebook.com
+
+---
+
+### Pinterest
+<img width="1714" height="435" alt="image" src="https://github.com/user-attachments/assets/ade17175-6aee-4769-a1c0-360b8258dd39" />
+
+API Access:  
+https://developers.pinterest.com
 
 ---
 
@@ -25,8 +46,6 @@ This project demonstrates how to publish images and videos automatically to diff
 - Supports both image and video posts
 - Credentials managed securely inside n8n
 - Safe for public GitHub repositories
-
----
 
 ---
 
