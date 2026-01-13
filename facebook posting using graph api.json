@@ -1,0 +1,266 @@
+{
+  "name": "facebook posting using graph api",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "multi media posting",
+        "formDescription": "use for automated response ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "media_url",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "caption",
+              "placeholder": "enter caption/bio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -1104,
+        -288
+      ],
+      "id": "79251b12-c092-48a4-854a-b526423b5c55",
+      "name": "On form submission",
+      "webhookId": "f21b2622-f0a4-455c-93c2-284b7609d79b"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b1c0cf5f-8aa6-4de7-9f5f-b16b966663d2"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9875cc2e-60c7-463c-88e9-849b3ed62cb3",
+                    "leftValue": "={{ $json.media_type }}",
+                    "rightValue": "video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -688,
+        -288
+      ],
+      "id": "80827b58-4a7f-4904-9d39-a32ffb2ce449",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "video"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -464,
+        -96
+      ],
+      "id": "d4bcbcbe-3023-4ae8-929c-3dab7f7b608c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const url = ($json.media_url || '').toLowerCase();\nconst ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();\n\nconst imageExt = ['jpg','jpeg','png','gif','webp','tiff','bmp','heif'];\nconst videoExt = ['mp4','mov','webm','mkv','avi','flv','m4v','3gp','mp3'];\n\nlet media_type = 'unknown';\nif (imageExt.includes(ext)) media_type = 'image';\nelse if (videoExt.includes(ext)) media_type = 'video';\n\nreturn [{ json: { ...$json, media_type } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -288
+      ],
+      "id": "063b004e-df5e-49f8-bb30-1810a377bcce",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v23.0",
+        "node": "938323886024617",
+        "edge": "photos",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "url",
+                "value": "={{ $json.media_url }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $json.caption }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        -304
+      ],
+      "id": "5bd953af-79ec-4387-a80c-2d0efb8b564c",
+      "name": "image post",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "EdIYwU2R07DfnkUv",
+          "name": "Facebook Graph account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpRequestMethod": "POST",
+        "graphApiVersion": "v23.0",
+        "node": "938323886024617",
+        "edge": "videos",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "file_url",
+                "value": "={{ $json.media_url }}"
+              },
+              {
+                "name": "caption",
+                "value": "={{ $json.caption }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -96
+      ],
+      "id": "38289576-cb6c-4f54-af04-f91d4c25565c",
+      "name": "video post",
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "EdIYwU2R07DfnkUv",
+          "name": "Facebook Graph account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "image post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "video post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "98429e09-f7cf-46d3-9164-aca4fe6889c5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f396997812cc19e1d10c072f552dce82a7580904c0d7c42ad49f248293b02614"
+  },
+  "id": "4frcRO9T3poRZKwY",
+  "tags": []
+}

@@ -1,0 +1,388 @@
+{
+  "name": "Pinterest",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "post-to-pinterest",
+        "formTitle": "Post to Pinterest",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Title",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Description",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "media_type",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Board Name ",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2b0079bd-0c2c-49b7-8626-54282ad786c3",
+      "name": "Form Trigger1",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        -432
+      ],
+      "webhookId": "9ca8715c-f695-40cf-b2cb-e1f33829ab29"
+    },
+    {
+      "parameters": {
+        "jsCode": "const url = $input.item.json.media_type || \"\";\n\nconst isVideo =\n  typeof url === \"string\" &&\n  (url.endsWith(\".mp4\") ||\n   url.endsWith(\".mov\") ||\n   url.endsWith(\".webm\") ||\n   url.includes(\"video\"));\n\nreturn [\n  {\n    json: {\n      title: $input.item.json.Title,\n      description: $input.item.json.Description,\n      board_name: $input.item.json[\"Board Name\"],\n      media_url: url,\n      media_type: isVideo ? \"video\" : \"image\"\n    }\n  }\n];\n"
+      },
+      "id": "a8c5d043-89f4-434a-8588-814dbc492a46",
+      "name": "Detect Media1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -432
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-sandbox.pinterest.com/v5/pins",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"board_id\": \"threads_id\",\n  \"title\": \"{{ $json.title }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"media_source\": {\n    \"source_type\": \"image_url\",\n    \"url\": \"{{ $json.media_url }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        -320
+      ],
+      "id": "35aeeee1-710b-47c2-b1d5-0e9b6eccc3ed",
+      "name": "board pin(image)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "......",
+          "name": "......"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1dd3169b-359b-4c3f-a859-0e19c46dc3aa",
+              "leftValue": "={{ $json.media_type }}",
+              "rightValue": "video",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -112,
+        -432
+      ],
+      "id": "7c2615c9-d3f9-4918-8222-c3db30f31966",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"If\"].json.media_url }}",
+        "options": {
+          "lowercaseHeaders": true,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "video"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        304,
+        -528
+      ],
+      "id": "3f51129b-ce13-4605-b53b-d9c731a74990",
+      "name": "Download"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-sandbox.pinterest.com/v5/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "video"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        96,
+        -528
+      ],
+      "id": "f6d7a454-62d8-4103-860d-fbe141e7e16f",
+      "name": "media",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "......",
+          "name": "....."
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $node[\"media\"].json.upload_url }}",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "key ",
+              "value": "={{ $json.upload_parameters.key }}"
+            },
+            {
+              "name": "policy",
+              "value": "={{ $json.upload_parameters.policy }}"
+            },
+            {
+              "name": "x-amz-algorithm",
+              "value": "={{ $json.upload_parameters['x-amz-algorithm'] }}"
+            },
+            {
+              "name": "x-amz-credential",
+              "value": "={{ $json.upload_parameters['x-amz-credential'] }}"
+            },
+            {
+              "name": "x-amz-date",
+              "value": "={{ $json.upload_parameters['x-amz-date'] }}"
+            },
+            {
+              "name": "x-amz-security-token",
+              "value": "={{ $json.upload_parameters['x-amz-security-token'] }}"
+            },
+            {
+              "name": "x-amz-signature",
+              "value": "={{ $json.upload_parameters['x-amz-signature'] }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "video"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        512,
+        -528
+      ],
+      "id": "236dfdaf-345b-46a3-b200-8e0e4b1e7640",
+      "name": "URLupload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-sandbox.pinterest.com/v5/pins",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"board_id\": \"threads_id\",\n  \"title\": \"{{ $node['Detect Media1'].json.title }}\",\n  \"description\": \"{{ $node['Detect Media1'].json.description }}\",\n  \"media_source\": {\n    \"source_type\": \"video_id\",\n    \"media_id\": \"{{ $node['media'].json.media_id }}\",\n    \"cover_image_url\": \"https://picsum.photos/600/900\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        928,
+        -528
+      ],
+      "id": "ea01cd9c-5984-4586-9656-fde968859eaa",
+      "name": "pin(video)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "......",
+          "name": "......"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -528
+      ],
+      "id": "1b05d504-f69c-4344-a710-28418dcf6cbd",
+      "name": "Wait",
+      "webhookId": "6593b300-4520-4f40-9a2e-5c44586e55c3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Form Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Detect Media1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Media1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "board pin(image)": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "board pin(image)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download": {
+      "main": [
+        [
+          {
+            "node": "URLupload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "media": {
+      "main": [
+        [
+          {
+            "node": "Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URLupload": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "pin(video)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4bbd60cf-1b57-491d-97bd-6f536483d806",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f396997812cc19e1d10c072f552dce82a7580904c0d7c42ad49f248293b02614"
+  },
+  "id": "8cL5EQgxv1GNAr3c",
+  "tags": []
+}

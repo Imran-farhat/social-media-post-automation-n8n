@@ -1,0 +1,385 @@
+{
+  "name": "Twitter",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "5e1940f2-7a33-4a33-b073-2e43584a462c",
+        "formTitle": "Post Video to X",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Post Content",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Image,Video",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "73bfedf8-28da-4068-a170-4caf61332421",
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        -80
+      ],
+      "webhookId": "5e1940f2-7a33-4a33-b073-2e43584a462c"
+    },
+    {
+      "parameters": {
+        "text": "={{ $('Prepare Finalize').item.json.text }}",
+        "additionalFields": {
+          "attachments": "={{ $json.media_id }}"
+        }
+      },
+      "id": "df643fad-b051-4360-921e-6cda2d2e5945",
+      "name": "Post Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        208
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "ZcdtcxP6liyN5vzR",
+          "name": "X account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "d1e075bd-1419-474b-ae4a-6bff7cbfa3a5",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        208
+      ],
+      "webhookId": "c2d4d146-d242-42d3-a7ad-552274141ff6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "FINALIZE"
+            },
+            {
+              "name": "media_id",
+              "value": "={{ $json.media_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9a5507b6-d4e4-478a-9be9-51c399066563",
+      "name": "FINALIZE Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1216,
+        -80
+      ],
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": "ziU7yOdj4oJIQmk8",
+          "name": "X OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "APPEND"
+            },
+            {
+              "name": "media_id",
+              "value": "={{ $json.media_id }}"
+            },
+            {
+              "name": "segment_index",
+              "value": "={{ $json.segment_index }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "media",
+              "inputDataFieldName": "media"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "895f547a-afcf-4f4b-83db-a81ec69171c3",
+      "name": "APPEND Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        976,
+        -80
+      ],
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": "ziU7yOdj4oJIQmk8",
+          "name": "X OAuth account"
+        },
+        "oAuth1Api": {
+          "id": "u7N4szPwu3ktNqlJ",
+          "name": "Unnamed credential 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item;\n\n// Detect binary key dynamically\nconst binaryKey = Object.keys(item.binary || {})[0];\nif (!binaryKey) throw new Error('No file uploaded');\n\nconst file = item.binary[binaryKey];\n\n// ✅ ALWAYS compute size from actual buffer\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst size = buffer.length;\n\n// Pass forward\nreturn [{\n  json: {\n    text: item.json[\"Post Content\"],\n    total_bytes: size,        // ✅ use this for INIT\n    media_type: file.mimeType,\n    binaryKey\n  },\n  binary: {\n    [binaryKey]: file\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -80
+      ],
+      "id": "b4959b97-822e-47b6-b602-b71ef918cd8c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB\n\n// Get input data properly\nconst item = $input.first();\n\n// Get media_id from INIT\nconst mediaId = item.json.media_id_string;\nif (!mediaId) {\n  throw new Error('media_id_string missing');\n}\n\n// Get binary from merge\nconst binaryKey = Object.keys(item.binary || {})[0];\nif (!binaryKey) {\n  throw new Error('Binary missing after Merge');\n}\n\n// Read binary correctly\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKey);\nconst totalChunks = Math.ceil(buffer.length / CHUNK_SIZE);\n\nconst items = [];\n\nfor (let i = 0; i < totalChunks; i++) {\n  const start = i * CHUNK_SIZE;\n  const end = Math.min(start + CHUNK_SIZE, buffer.length);\n  const chunkBuffer = buffer.slice(start, end);\n  \n  // ✅ CORRECT: Create proper binary data\n  const chunkBinary = await this.helpers.prepareBinaryData(\n    chunkBuffer,\n    `video_chunk_${i}.mp4`,  // filename\n    'video/mp4'              // mime type\n  );\n  \n  items.push({\n    json: {\n      media_id: mediaId,\n      segment_index: i,\n      total_chunks: totalChunks  // Useful for tracking\n    },\n    binary: {\n      media: chunkBinary  // ✅ Proper n8n binary object\n    }\n  });\n}\n\nconsole.log(`Created ${items.length} chunks for media_id: ${mediaId}`);\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -80
+      ],
+      "id": "63bf1cea-2608-42f0-8122-7c26ab2908d3",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "command",
+              "value": "=INIT"
+            },
+            {
+              "name": "total_bytes",
+              "value": "={{ $json.total_bytes }}"
+            },
+            {
+              "name": "media_type",
+              "value": "={{ $json.media_type }}"
+            },
+            {
+              "name": "media_category",
+              "value": "=tweet_video"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        336,
+        -192
+      ],
+      "id": "0bf127eb-5437-4d7f-b393-e13f24c11926",
+      "name": "INIT request1",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": "ziU7yOdj4oJIQmk8",
+          "name": "X OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        -80
+      ],
+      "id": "cd7eec4d-c2e4-4277-8da2-828e95f3127e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    media_id: $items()[0].json.media_id,\n    text: $('Code in JavaScript').first().json.text\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        96
+      ],
+      "id": "d6207f7e-b860-4612-a933-619bbd67ff87",
+      "name": "Prepare Finalize"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Tweet": {
+      "main": [
+        []
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Post Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FINALIZE Upload": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APPEND Upload": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "INIT request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Finalize",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "APPEND Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INIT request1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Finalize": {
+      "main": [
+        [
+          {
+            "node": "FINALIZE Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eeb649c1-01e0-4743-b86c-e3238cf4a7b9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f396997812cc19e1d10c072f552dce82a7580904c0d7c42ad49f248293b02614"
+  },
+  "id": "qjLEGrNKg5m3B24B",
+  "tags": []
+}
